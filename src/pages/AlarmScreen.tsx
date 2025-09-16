@@ -1,0 +1,188 @@
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Camera, CameraOff, RotateCcw, CheckCircle } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import PushupCounter from "@/components/PushupCounter";
+
+const AlarmScreen = () => {
+  const navigate = useNavigate();
+  const [pushupCount, setPushupCount] = useState(0);
+  const [targetPushups] = useState(20); // This would come from the alarm data
+  const [alarmTime] = useState("07:00"); // This would come from the alarm data
+  const [cameraEnabled, setCameraEnabled] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Simulate alarm sound (you'd use a real alarm sound file)
+  const playAlarmSound = () => {
+    // Create audio context for alarm sound
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    
+    oscillator.start();
+    setTimeout(() => oscillator.stop(), 500);
+  };
+
+  useEffect(() => {
+    // Play alarm sound every 2 seconds until dismissed
+    if (!isCompleted) {
+      const interval = setInterval(playAlarmSound, 2000);
+      return () => clearInterval(interval);
+    }
+  }, [isCompleted]);
+
+  useEffect(() => {
+    if (pushupCount >= targetPushups) {
+      setIsCompleted(true);
+      toast({
+        title: "Alarm Dismissed! 🎉",
+        description: `Great job! You completed ${targetPushups} pushups.`,
+      });
+      
+      // Auto-navigate after 3 seconds
+      setTimeout(() => {
+        navigate("/");
+      }, 3000);
+    }
+  }, [pushupCount, targetPushups, navigate]);
+
+  const enableCamera = async () => {
+    try {
+      await navigator.mediaDevices.getUserMedia({ video: true });
+      setCameraEnabled(true);
+      toast({
+        title: "Camera enabled",
+        description: "Get in position and start doing pushups!"
+      });
+    } catch (error) {
+      toast({
+        title: "Camera access denied",
+        description: "Please allow camera access to track your pushups.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const resetCount = () => {
+    setPushupCount(0);
+    toast({
+      title: "Counter reset",
+      description: "Starting over. You can do this!"
+    });
+  };
+
+  const progress = (pushupCount / targetPushups) * 100;
+
+  if (isCompleted) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="p-8 text-center max-w-md w-full">
+          <CheckCircle size={64} className="mx-auto mb-4 text-accent" />
+          <h1 className="text-2xl font-bold mb-2">Alarm Dismissed!</h1>
+          <p className="text-muted-foreground mb-4">
+            Congratulations! You completed {targetPushups} pushups.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Redirecting to dashboard in 3 seconds...
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-destructive/10 relative">
+      {/* Alarm Header - Always visible */}
+      <div className="sticky top-0 bg-destructive text-destructive-foreground p-4 text-center z-50">
+        <h1 className="text-2xl font-bold animate-pulse">🚨 ALARM ACTIVE 🚨</h1>
+        <p className="text-lg">{alarmTime}</p>
+        <p className="text-sm opacity-90">Complete pushups to dismiss</p>
+      </div>
+
+      {/* Main Content */}
+      <div className="p-4 space-y-4">
+        {/* Progress Card */}
+        <Card className="p-6 text-center">
+          <div className="mb-4">
+            <div className="text-4xl font-bold text-primary mb-2">
+              {pushupCount} / {targetPushups}
+            </div>
+            <Progress value={progress} className="h-3 mb-2" />
+            <p className="text-sm text-muted-foreground">
+              {targetPushups - pushupCount} pushups remaining
+            </p>
+          </div>
+          
+          <div className="flex justify-center gap-2">
+            <Button onClick={resetCount} variant="outline" size="sm">
+              <RotateCcw size={16} className="mr-2" />
+              Reset
+            </Button>
+          </div>
+        </Card>
+
+        {/* Camera Section */}
+        {!cameraEnabled ? (
+          <Card className="p-6 text-center">
+            <CameraOff size={48} className="mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-medium mb-2">Enable Camera</h3>
+            <p className="text-muted-foreground mb-4">
+              Allow camera access to track your pushup form automatically.
+            </p>
+            <Button onClick={enableCamera} className="w-full">
+              <Camera size={16} className="mr-2" />
+              Enable Camera
+            </Button>
+          </Card>
+        ) : (
+          <Card className="p-4">
+            <h3 className="font-medium mb-4 text-center">Pushup Detection</h3>
+            <PushupCounter 
+              onPushupDetected={() => setPushupCount(prev => prev + 1)}
+              targetCount={targetPushups}
+              currentCount={pushupCount}
+            />
+          </Card>
+        )}
+
+        {/* Instructions */}
+        <Card className="p-4 bg-muted/50">
+          <h3 className="font-medium mb-2">Instructions</h3>
+          <ul className="text-sm text-muted-foreground space-y-1">
+            <li>• Position yourself in front of the camera</li>
+            <li>• Perform full pushups with proper form</li>
+            <li>• The camera will automatically count valid pushups</li>
+            <li>• Complete {targetPushups} pushups to dismiss the alarm</li>
+          </ul>
+        </Card>
+
+        {/* Manual increment for testing */}
+        <Card className="p-4 border-dashed border-warning bg-warning/5">
+          <p className="text-sm text-center text-muted-foreground mb-2">
+            Demo Mode - Manual Counter
+          </p>
+          <Button 
+            onClick={() => setPushupCount(prev => prev + 1)} 
+            variant="outline" 
+            className="w-full"
+            disabled={pushupCount >= targetPushups}
+          >
+            + Add Pushup (Testing)
+          </Button>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default AlarmScreen;
