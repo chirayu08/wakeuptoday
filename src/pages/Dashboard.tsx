@@ -157,12 +157,19 @@ const Dashboard = () => {
 
         {/* Quick Test Button */}
         <div className="mt-8 text-center">
-          <Link to="/alarm-active">
-            <Button variant="outline" className="flex items-center gap-2 rounded-2xl font-semibold h-12 px-6 border-2 border-primary/30 hover:bg-primary/10 transition-all duration-300 hover:scale-105">
-              <Play size={18} />
-              🚀 Test Alarm (Demo)
-            </Button>
-          </Link>
+          <div className="flex gap-3 justify-center">
+            <Link to="/alarm-active">
+              <Button variant="outline" className="flex items-center gap-2 rounded-2xl font-semibold h-12 px-6 border-2 border-primary/30 hover:bg-primary/10 transition-all duration-300 hover:scale-105">
+                <Play size={18} />
+                🚀 Test Alarm (Demo)
+              </Button>
+            </Link>
+            <Link to="/supabase-test">
+              <Button variant="outline" className="flex items-center gap-2 rounded-2xl font-semibold h-12 px-6 border-2 border-accent/30 hover:bg-accent/10 transition-all duration-300 hover:scale-105">
+                🔍 Verify Supabase
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 

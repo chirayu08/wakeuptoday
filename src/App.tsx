@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import SetAlarm from "./pages/SetAlarm";
 import AlarmScreen from "./pages/AlarmScreen";
 import History from "./pages/History";
+import SupabaseTest from "./pages/SupabaseTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/set-alarm" element={<SetAlarm />} />
             <Route path="/alarm-active" element={<AlarmScreen />} />
             <Route path="/history" element={<History />} />
+            <Route path="/supabase-test" element={<SupabaseTest />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
