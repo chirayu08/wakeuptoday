@@ -65,6 +65,13 @@ export default {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
         },
+        ios: {
+          green: "hsl(var(--ios-green))",
+          blue: "hsl(var(--ios-blue))",
+          red: "hsl(var(--ios-red))",
+          orange: "hsl(var(--ios-orange))",
+          gray: "hsl(var(--ios-gray))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
