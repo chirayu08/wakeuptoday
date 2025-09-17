@@ -4,8 +4,8 @@ export async function testSupabaseConnection() {
   try {
     console.log('Testing Supabase connection...');
     
-    // Test basic connection
-    const { data, error } = await supabase.from('_supabase_migrations').select('*').limit(1);
+    // Test basic connection by checking if we can access the database
+    const { data, error } = await supabase.rpc('version');
     
     if (error) {
       console.error('Supabase connection error:', error);
