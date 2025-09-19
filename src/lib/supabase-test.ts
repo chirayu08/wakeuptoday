@@ -5,7 +5,7 @@ export async function testSupabaseConnection() {
     console.log('Testing Supabase connection...');
     
     // Test basic connection by checking if we can access the database
-    const { data, error } = await supabase.rpc('version');
+    const { data, error } = await supabase.from('workout_logs').select('id').limit(1);
     
     if (error) {
       console.error('Supabase connection error:', error);
