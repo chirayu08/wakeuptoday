@@ -4,8 +4,8 @@ export async function testSupabaseConnection() {
   try {
     console.log('Testing Supabase connection...');
     
-    // Test basic connection by checking if we can access the database
-    const { data, error } = await supabase.from('workout_logs').select('id').limit(1);
+    // Test basic connection by checking auth status
+    const { data: { session }, error } = await supabase.auth.getSession();
     
     if (error) {
       console.error('Supabase connection error:', error);
@@ -20,7 +20,7 @@ export async function testSupabaseConnection() {
     return {
       success: true,
       message: 'Successfully connected to Supabase',
-      data
+      data: session
     };
   } catch (err) {
     console.error('Unexpected error:', err);

@@ -14,7 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      workout_logs: {
+        Row: {
+          alarm_name: string | null
+          completed_at: string
+          completed_pushups: number
+          created_at: string
+          duration_seconds: number
+          id: string
+          target_pushups: number
+          user_id: string
+        }
+        Insert: {
+          alarm_name?: string | null
+          completed_at?: string
+          completed_pushups?: number
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          target_pushups?: number
+          user_id: string
+        }
+        Update: {
+          alarm_name?: string | null
+          completed_at?: string
+          completed_pushups?: number
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          target_pushups?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

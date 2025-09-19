@@ -4,16 +4,21 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Camera, CameraOff, RotateCcw, CheckCircle } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import PushupCounter from "@/components/PushupCounter";
+import { createWorkoutLog } from "@/lib/database";
+import { useAuth } from "@/hooks/useAuth";
 
 const AlarmScreen = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [pushupCount, setPushupCount] = useState(0);
   const [targetPushups] = useState(20); // This would come from the alarm data
   const [alarmTime] = useState("07:00"); // This would come from the alarm data
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [startTime] = useState(Date.now());
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Simulate alarm sound (you'd use a real alarm sound file)
@@ -44,17 +49,41 @@ const AlarmScreen = () => {
   useEffect(() => {
     if (pushupCount >= targetPushups) {
       setIsCompleted(true);
-      toast({
-        title: "Alarm Dismissed! 🎉",
-        description: `Great job! You completed ${targetPushups} pushups.`,
-      });
+      
+      // Save workout log to database
+      const saveWorkout = async () => {
+        try {
+          const duration = Math.round((Date.now() - startTime) / 1000);
+          await createWorkoutLog({
+            target_pushups: targetPushups,
+            completed_pushups: pushupCount,
+            duration_seconds: duration,
+            completed_at: new Date().toISOString(),
+            alarm_name: "Morning Boost"
+          });
+          
+          toast({
+            title: "Alarm Dismissed! 🎉",
+            description: `Great job! You completed ${targetPushups} pushups in ${Math.round(duration / 60)} minutes.`,
+          });
+        } catch (error) {
+          console.error('Error saving workout:', error);
+          toast({
+            title: "Alarm dismissed!",
+            description: "Note: Could not save to history, but you did great!",
+            variant: "destructive",
+          });
+        }
+      };
+
+      saveWorkout();
       
       // Auto-navigate after 3 seconds
       setTimeout(() => {
         navigate("/");
       }, 3000);
     }
-  }, [pushupCount, targetPushups, navigate]);
+  }, [pushupCount, targetPushups, navigate, startTime, toast]);
 
   const enableCamera = async () => {
     try {
