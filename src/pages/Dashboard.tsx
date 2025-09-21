@@ -5,27 +5,13 @@ import { Button } from "@/components/ui/button";
 import { SlideToggle } from "@/components/ui/slide-toggle";
 import { Plus, Clock, Trash2, Edit, Play } from "lucide-react";
 import Navigation from "@/components/Navigation";
-
-interface Alarm {
-  id: string;
-  time: string;
-  pushups: number;
-  enabled: boolean;
-  name?: string;
-}
+import { getAlarms, updateAlarm, deleteAlarm as deleteAlarmDb, Alarm } from "@/lib/database";
+import { toast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
-  const [alarms, setAlarms] = useState<Alarm[]>([
-    {
-      id: "1",
-      time: "07:00",
-      pushups: 5,
-      enabled: true,
-      name: "Morning Workout"
-    }
-  ]);
-
+  const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -35,14 +21,67 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const toggleAlarm = (id: string) => {
-    setAlarms(alarms.map(alarm => 
-      alarm.id === id ? { ...alarm, enabled: !alarm.enabled } : alarm
-    ));
+  useEffect(() => {
+    loadAlarms();
+  }, []);
+
+  const loadAlarms = async () => {
+    try {
+      const data = await getAlarms();
+      setAlarms(data);
+    } catch (error) {
+      console.error('Error loading alarms:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load alarms. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deleteAlarm = (id: string) => {
-    setAlarms(alarms.filter(alarm => alarm.id !== id));
+  const toggleAlarm = async (id: string) => {
+    try {
+      const alarm = alarms.find(a => a.id === id);
+      if (!alarm) return;
+      
+      await updateAlarm(id, { enabled: !alarm.enabled });
+      setAlarms(alarms.map(alarm => 
+        alarm.id === id ? { ...alarm, enabled: !alarm.enabled } : alarm
+      ));
+      
+      toast({
+        title: "Alarm updated!",
+        description: `Alarm ${alarm.enabled ? 'disabled' : 'enabled'}.`
+      });
+    } catch (error) {
+      console.error('Error updating alarm:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update alarm. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const deleteAlarm = async (id: string) => {
+    try {
+      await deleteAlarmDb(id);
+      setAlarms(alarms.filter(alarm => alarm.id !== id));
+      
+      toast({
+        title: "Alarm deleted!",
+        description: "Your alarm has been removed."
+      });
+    } catch (error) {
+      console.error('Error deleting alarm:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete alarm. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const formatTime = (date: Date) => {
@@ -86,7 +125,11 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        {alarms.length === 0 ? (
+        {loading ? (
+          <Card className="p-10 text-center bg-gradient-to-br from-muted/50 to-primary/5 border-2 border-primary/20">
+            <div className="text-lg text-primary">Loading alarms...</div>
+          </Card>
+        ) : alarms.length === 0 ? (
           <Card className="p-10 text-center bg-gradient-to-br from-muted/50 to-primary/5 border-2 border-primary/20">
             <Clock size={64} className="mx-auto mb-4 text-primary" />
             <h3 className="text-xl font-bold mb-2 text-primary">No alarms set</h3>

@@ -8,6 +8,7 @@ import { SlideToggle } from "@/components/ui/slide-toggle";
 import { ArrowLeft, Save, Clock } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import { toast } from "@/hooks/use-toast";
+import { createAlarm } from "@/lib/database";
 
 const SetAlarm = () => {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ const SetAlarm = () => {
     enabled: true
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.time) {
@@ -42,15 +43,28 @@ const SetAlarm = () => {
       return;
     }
 
-    // Here you would save to Supabase
-    console.log("Saving alarm:", formData);
-    
-    toast({
-      title: "Alarm saved!",
-      description: `Your alarm has been set for ${formData.time} with ${formData.pushups} pushups.`
-    });
+    try {
+      await createAlarm({
+        name: formData.name || undefined,
+        time: formData.time,
+        pushups: formData.pushups,
+        enabled: formData.enabled
+      });
+      
+      toast({
+        title: "Alarm saved!",
+        description: `Your alarm has been set for ${formData.time} with ${formData.pushups} pushups.`
+      });
 
-    navigate("/");
+      navigate("/");
+    } catch (error) {
+      console.error('Error saving alarm:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save alarm. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const pushupPresets = [5, 10, 15, 20, 25, 30];

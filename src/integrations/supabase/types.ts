@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      alarms: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          name: string | null
+          pushups: number
+          time: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name?: string | null
+          pushups?: number
+          time: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name?: string | null
+          pushups?: number
+          time?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workout_logs: {
         Row: {
           alarm_name: string | null

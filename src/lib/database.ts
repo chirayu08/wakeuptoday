@@ -19,6 +19,7 @@ export interface Alarm {
   enabled: boolean;
   name?: string;
   created_at: string;
+  updated_at: string;
 }
 
 // Workout Log operations
@@ -57,6 +58,67 @@ export async function getWorkoutLogs(limit?: number) {
 
   if (error) throw error;
   return data as WorkoutLog[];
+}
+
+// Alarm operations
+export async function createAlarm(alarm: Omit<Alarm, 'id' | 'user_id' | 'created_at' | 'updated_at'>) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase
+    .from('alarms')
+    .insert({
+      ...alarm,
+      user_id: user.id,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getAlarms() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase
+    .from('alarms')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('time', { ascending: true });
+
+  if (error) throw error;
+  return data as Alarm[];
+}
+
+export async function updateAlarm(id: string, updates: Partial<Omit<Alarm, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { data, error } = await supabase
+    .from('alarms')
+    .update(updates)
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteAlarm(id: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const { error } = await supabase
+    .from('alarms')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id);
+
+  if (error) throw error;
 }
 
 export async function signOut() {
