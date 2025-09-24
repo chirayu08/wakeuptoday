@@ -20,32 +20,92 @@ const AlarmScreen = () => {
   const [cameraEnabled, setCameraEnabled] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [startTime] = useState(Date.now());
+  const [audioContextInitialized, setAudioContextInitialized] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Simulate alarm sound (you'd use a real alarm sound file)
+  // Play alarm sound with proper mobile browser support
   const playAlarmSound = () => {
-    // Create audio context for alarm sound
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    
-    oscillator.start();
-    setTimeout(() => oscillator.stop(), 500);
+    try {
+      // Check if AudioContext is available and requires user interaction
+      if (typeof window.AudioContext === 'undefined' && typeof (window as any).webkitAudioContext === 'undefined') {
+        console.log('AudioContext not supported');
+        return;
+      }
+
+      // Create audio context only after user interaction
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Check if context is suspended (common on mobile)
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          createAlarmTone(audioContext);
+        }).catch(err => {
+          console.log('Could not resume audio context:', err);
+        });
+      } else {
+        createAlarmTone(audioContext);
+      }
+    } catch (error) {
+      console.log('Alarm sound not available:', error);
+      // Fallback: just log instead of playing sound
+    }
+  };
+
+  // Helper function to create alarm tone
+  const createAlarmTone = (audioContext: AudioContext) => {
+    try {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      
+      oscillator.start();
+      setTimeout(() => {
+        try {
+          oscillator.stop();
+        } catch (e) {
+          // Oscillator might already be stopped
+        }
+      }, 500);
+    } catch (error) {
+      console.log('Could not create alarm tone:', error);
+    }
   };
 
   useEffect(() => {
-    // Play alarm sound every 2 seconds until dismissed
-    if (!isCompleted) {
+    // Initialize audio context on first user interaction
+    const initAudio = () => {
+      if (!audioContextInitialized) {
+        setAudioContextInitialized(true);
+        // Play first alarm sound to initialize audio context
+        playAlarmSound();
+      }
+    };
+
+    // Add event listeners for user interaction
+    const events = ['touchstart', 'click', 'keydown'];
+    events.forEach(event => {
+      document.addEventListener(event, initAudio, { once: true });
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, initAudio);
+      });
+    };
+  }, [audioContextInitialized]);
+
+  useEffect(() => {
+    // Play alarm sound every 2 seconds until dismissed (only if audio is initialized)
+    if (!isCompleted && audioContextInitialized) {
       const interval = setInterval(playAlarmSound, 2000);
       return () => clearInterval(interval);
     }
-  }, [isCompleted]);
+  }, [isCompleted, audioContextInitialized]);
 
   useEffect(() => {
     if (pushupCount >= targetPushups) {
@@ -88,18 +148,69 @@ const AlarmScreen = () => {
 
   const enableCamera = async () => {
     try {
-      await navigator.mediaDevices.getUserMedia({ video: true });
+      console.log('Attempting to enable camera...');
+      
+      // Check if mediaDevices is available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera API not supported in this browser');
+      }
+
+      // Check if we're in a secure context (HTTPS)
+      if (!window.isSecureContext) {
+        throw new Error('Camera requires HTTPS connection');
+      }
+
+      // Request camera permission with mobile-optimized constraints
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: {
+          facingMode: 'environment', // Prefer rear camera
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 }
+        }
+      });
+
+      // Clean up the test stream immediately
+      stream.getTracks().forEach(track => track.stop());
+      
       setCameraEnabled(true);
+      console.log('Camera permission granted');
+      
       toast({
         title: "Camera enabled",
         description: "Get in position and start doing pushups!"
       });
     } catch (error) {
+      console.error('Camera error:', error);
+      
+      let errorMessage = "Please allow camera access to track your pushups.";
+      let errorTitle = "Camera access denied";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('HTTPS')) {
+          errorMessage = "Camera requires a secure connection (HTTPS).";
+          errorTitle = "Secure connection required";
+        } else if (error.message.includes('not supported')) {
+          errorMessage = "Your browser doesn't support camera access.";
+          errorTitle = "Browser not supported";
+        } else if (error.name === 'NotAllowedError') {
+          errorMessage = "Camera permission was denied. Please allow camera access in your browser settings.";
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = "No camera found on this device.";
+          errorTitle = "Camera not found";
+        } else if (error.name === 'NotReadableError') {
+          errorMessage = "Camera is being used by another application.";
+          errorTitle = "Camera busy";
+        }
+      }
+      
       toast({
-        title: "Camera access denied",
-        description: "Please allow camera access to track your pushups.",
+        title: errorTitle,
+        description: errorMessage,
         variant: "destructive"
       });
+      
+      // Still allow manual detection even if camera fails
+      setCameraEnabled(false);
     }
   };
 

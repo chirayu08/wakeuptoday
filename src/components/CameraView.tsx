@@ -22,20 +22,48 @@ const CameraView: React.FC<CameraViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // Start camera stream
+  // Start camera stream with better mobile support
   const startCamera = async () => {
     try {
       setError(null);
+      console.log('Starting camera...');
       
-      // Request camera access with rear camera preference for better body tracking
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment', // Try to use rear camera first
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: false
-      });
+      // Check browser support
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera API not supported');
+      }
+
+      // Check secure context
+      if (!window.isSecureContext) {
+        throw new Error('Camera requires HTTPS');
+      }
+
+      let stream: MediaStream;
+      
+      try {
+        // Try rear camera first (better for body tracking)
+        console.log('Attempting rear camera...');
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { exact: 'environment' },
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 }
+          },
+          audio: false
+        });
+      } catch (rearCameraError) {
+        console.log('Rear camera failed, trying front camera:', rearCameraError);
+        
+        // Fallback to front camera
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'user',
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 }
+          },
+          audio: false
+        });
+      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -43,47 +71,41 @@ const CameraView: React.FC<CameraViewProps> = ({
         setIsCameraActive(true);
         onCameraReady?.(true);
         
+        console.log('Camera started successfully');
         toast({
           title: "Camera activated",
           description: "Position yourself in view and start doing pushups!"
         });
       }
     } catch (err) {
-      console.error('Camera access error:', err);
+      console.error('Camera error:', err);
       
-      // Try with front camera if rear camera fails
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'user', // Front camera fallback
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        });
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          streamRef.current = stream;
-          setIsCameraActive(true);
-          onCameraReady?.(true);
-          
-          toast({
-            title: "Camera activated (front)",
-            description: "Using front camera - position yourself in view!"
-          });
+      let errorMessage = 'Camera access denied or unavailable';
+      
+      if (err instanceof Error) {
+        if (err.message.includes('HTTPS')) {
+          errorMessage = 'Camera requires secure connection (HTTPS)';
+        } else if (err.message.includes('not supported')) {
+          errorMessage = 'Browser does not support camera';
+        } else if (err.name === 'NotAllowedError') {
+          errorMessage = 'Camera permission denied - please allow access';
+        } else if (err.name === 'NotFoundError') {
+          errorMessage = 'No camera found on device';
+        } else if (err.name === 'NotReadableError') {
+          errorMessage = 'Camera busy or hardware error';
+        } else if (err.name === 'OverconstrainedError') {
+          errorMessage = 'Camera constraints not supported';
         }
-      } catch (fallbackErr) {
-        const errorMessage = 'Camera access denied or unavailable';
-        setError(errorMessage);
-        onCameraReady?.(false);
-        
-        toast({
-          title: "Camera error",
-          description: "Please allow camera access to track your pushups.",
-          variant: "destructive"
-        });
       }
+      
+      setError(errorMessage);
+      onCameraReady?.(false);
+      
+      toast({
+        title: "Camera error",
+        description: errorMessage,
+        variant: "destructive"
+      });
     }
   };
 
