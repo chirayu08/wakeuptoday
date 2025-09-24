@@ -75,11 +75,11 @@ const PushupMLCounter: React.FC<PushupMLCounterProps> = ({
     
     // Provide feedback
     if (!detection.metrics.isValidMotion) {
-      setFeedback('Hold device and do pushups');
+      setFeedback('Place device under you and start pushups');
     } else if (detection.isDown) {
-      setFeedback('Going down - keep it steady!');
+      setFeedback('Down position detected - push back up!');
     } else {
-      setFeedback('Push up! Great form!');
+      setFeedback('Ready for next pushup!');
     }
   }, [isDetecting]);
 
@@ -274,10 +274,11 @@ const PushupMLCounter: React.FC<PushupMLCounterProps> = ({
           <p><strong>Instructions:</strong></p>
           {detectionMode === 'motion' ? (
             <ul className="list-disc pl-5 space-y-1">
-              <li>Hold your phone/tablet in your hand while doing pushups</li>
-              <li>The motion sensors will detect the up/down movement</li>
-              <li>Perform steady, controlled pushups for best detection</li>
-              <li>The device will automatically count valid pushups</li>
+              <li>Place your phone/tablet on the floor under your chest area</li>
+              <li>Start in plank position above the device</li>
+              <li>The motion sensors will detect when you go down and back up</li>
+              <li>Perform steady, controlled pushups - the device detects the vertical movement</li>
+              <li>Each complete down-to-up movement counts as one pushup</li>
             </ul>
           ) : (
             <ul className="list-disc pl-5 space-y-1">
