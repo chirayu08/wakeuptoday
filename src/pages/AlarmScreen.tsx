@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Camera, CameraOff, RotateCcw, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import PushupCounter from "@/components/PushupCounter";
+import PushupMLCounter from "@/components/PushupMLCounter";
+import CameraView from "@/components/CameraView";
 import { createWorkoutLog } from "@/lib/database";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -160,37 +161,47 @@ const AlarmScreen = () => {
           </div>
         </Card>
 
-        {/* Camera Section */}
+        {/* Camera & Detection Section */}
         {!cameraEnabled ? (
           <Card className="p-6 text-center">
             <CameraOff size={48} className="mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-medium mb-2">Enable Camera</h3>
+            <h3 className="text-lg font-medium mb-2">Enable Camera & Detection</h3>
             <p className="text-muted-foreground mb-4">
-              Allow camera access to track your pushup form automatically.
+              Allow camera access to see your body and track pushups automatically.
             </p>
             <Button onClick={enableCamera} className="w-full">
               <Camera size={16} className="mr-2" />
-              Enable Camera
+              Enable Camera & Start Detection
             </Button>
           </Card>
         ) : (
-          <Card className="p-4">
-            <h3 className="font-medium mb-4 text-center">Pushup Detection</h3>
-            <PushupCounter 
-              onPushupDetected={() => setPushupCount(prev => prev + 1)}
-              targetCount={targetPushups}
-              currentCount={pushupCount}
+          <div className="space-y-4">
+            {/* Camera View */}
+            <CameraView 
+              isActive={cameraEnabled}
+              onCameraReady={(ready) => console.log('Camera ready:', ready)}
             />
-          </Card>
+            
+            {/* Pushup Detection */}
+            <Card className="p-4">
+              <h3 className="font-medium mb-4 text-center">Smart Pushup Detection</h3>
+              <PushupMLCounter 
+                onPushupDetected={() => setPushupCount(prev => prev + 1)}
+                targetCount={targetPushups}
+                currentCount={pushupCount}
+              />
+            </Card>
+          </div>
         )}
 
         {/* Instructions */}
         <Card className="p-4 bg-muted/50">
           <h3 className="font-medium mb-2">Instructions</h3>
           <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• Position yourself in front of the camera</li>
-            <li>• Perform full pushups with proper form</li>
-            <li>• The camera will automatically count valid pushups</li>
+            <li>• Position yourself in the camera view to monitor your form</li>
+            <li>• Place your device under your chest area on the floor for motion detection</li>
+            <li>• Start in plank position above the device</li>
+            <li>• Perform controlled pushups - the device detects down-to-up movement</li>
             <li>• Complete {targetPushups} pushups to dismiss the alarm</li>
           </ul>
         </Card>
